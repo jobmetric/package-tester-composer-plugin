@@ -1,0 +1,53 @@
+{
+    "name": "jobmetric/package-tester-composer-plugin",
+    "description": "Composer plugin for package tester to manage local package development workflow.",
+    "type": "composer-plugin",
+    "license": "MIT",
+    "keywords": [
+        "JobMetric",
+        "laravel",
+        "package",
+        "composer",
+        "plugin",
+        "package tester",
+        "local package development",
+        "package development workflow"
+    ],
+    "homepage": "https://jobmetric.github.io/packages/package-tester-composer-plugin",
+    "require": {
+        "php": ">=8.0.1",
+        "composer-plugin-api": "^2.0"
+    },
+    "require-dev": {
+        "composer/composer": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "JobMetric\\PackageTesterComposerPlugin\\": "src/"
+        }
+    },
+    "extra": {
+        "class": "JobMetric\\PackageTesterComposerPlugin\\Plugin",
+        "laravel": {
+            "providers": [
+                "JobMetric\\PackageTesterComposerPlugin\\PackageTesterComposerPluginServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "authors": [
+        {
+            "name": "Majid Mohammadian",
+            "email": "majeedmohammadian@gmail.com",
+            "homepage": "https://www.linkedin.com/in/majidmohammadian/",
+            "role": "Full Stack Developer"
+        },
+        {
+            "name": "Matin Bagheri",
+            "email": "themainmatin@gmail.com",
+            "homepage": "https://www.linkedin.com/in/bagherimatin/",
+            "role": "PHP Developer"
+        }
+
+    ]
+}
