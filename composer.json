@@ -15,11 +15,10 @@
     ],
     "homepage": "https://jobmetric.github.io/packages/package-tester-composer-plugin",
     "require": {
-        "php": ">=8.0.1",
-        "composer-plugin-api": "^2.0"
+        "php": ">=8.0.1"
     },
     "require-dev": {
-        "composer/composer": "^2.0"
+        "composer/composer": "^2.9"
     },
     "autoload": {
         "psr-4": {
@@ -48,6 +47,5 @@
             "homepage": "https://www.linkedin.com/in/bagherimatin/",
             "role": "PHP Developer"
         }
-
     ]
 }
