@@ -15,9 +15,8 @@
     ],
     "homepage": "https://jobmetric.github.io/packages/package-tester-composer-plugin",
     "require": {
-        "php": ">=8.0.1"
-    },
-    "require-dev": {
+        "php": ">=8.0.1",
+        "composer-plugin-api": "^2.0",
         "composer/composer": "^2.9"
     },
     "autoload": {
@@ -26,14 +25,10 @@
         }
     },
     "extra": {
-        "class": "JobMetric\\PackageTesterComposerPlugin\\Plugin",
-        "laravel": {
-            "providers": [
-                "JobMetric\\PackageTesterComposerPlugin\\PackageTesterComposerPluginServiceProvider"
-            ]
-        }
+        "class": "JobMetric\\PackageTesterComposerPlugin\\Plugin"
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "authors": [
         {
             "name": "Majid Mohammadian",
