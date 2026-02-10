@@ -11,38 +11,126 @@ use Composer\Script\ScriptEvents;
 use JobMetric\PackageTesterComposerPlugin\Discoverers\Discoverer;
 use JobMetric\PackageTesterComposerPlugin\Extra\ConfigExtra;
 
+/**
+ * Class Plugin
+ *
+ * Composer plugin that automatically discovers and registers test namespaces
+ * from packages into the root package's autoload-dev configuration.
+ *
+ * This plugin hooks into Composer's pre-autoload-dump event to inject
+ * PSR-4 autoload mappings for package tests, enabling seamless test execution
+ * across multiple packages in a monorepo or development environment.
+ *
+ * @package JobMetric\PackageTesterComposerPlugin
+ */
 class Plugin implements PluginInterface, EventSubscriberInterface
 {
+    /**
+     * The Composer instance.
+     *
+     * @var Composer|null
+     */
     protected ?Composer $composer = null;
+
+    /**
+     * The IO interface for console output.
+     *
+     * @var IOInterface|null
+     */
     protected ?IOInterface $io = null;
+
+    /**
+     * The package discoverer instance.
+     *
+     * @var Discoverer|null
+     */
     protected ?Discoverer $discoverer = null;
+
+    /**
+     * The configuration extra handler instance.
+     *
+     * @var ConfigExtra|null
+     */
     protected ?ConfigExtra $configExtra = null;
 
+    /**
+     * Activate the plugin.
+     *
+     * Called when the plugin is activated. Initializes the composer instance,
+     * IO interface, discoverer, and configuration handler.
+     *
+     * @param Composer    $composer The Composer instance
+     * @param IOInterface $io       The IO interface for console output
+     *
+     * @return void
+     */
     public function activate(Composer $composer, IOInterface $io): void
     {
         $this->composer = $composer;
         $this->io = $io;
         $this->discoverer = new Discoverer($composer);
         $this->configExtra = new ConfigExtra($this->getBasePath());
+
+        $this->io->write("PackageTester Plugin activated");
     }
 
-    public function deactivate(Composer $composer, IOInterface $io): void {}
+    /**
+     * Deactivate the plugin.
+     *
+     * Called when the plugin is deactivated. Currently performs no cleanup actions.
+     *
+     * @param Composer    $composer The Composer instance
+     * @param IOInterface $io       The IO interface for console output
+     *
+     * @return void
+     */
+    public function deactivate(Composer $composer, IOInterface $io): void
+    {
+        // No cleanup needed on deactivation
+    }
 
+    /**
+     * Uninstall the plugin.
+     *
+     * Called when the plugin is being uninstalled. Clears any persisted
+     * configuration files created by the plugin.
+     *
+     * @param Composer    $composer The Composer instance
+     * @param IOInterface $io       The IO interface for console output
+     *
+     * @return void
+     */
     public function uninstall(Composer $composer, IOInterface $io): void
     {
         $basePath = $this->getBasePath();
         (new ConfigExtra($basePath))->clear();
     }
 
+    /**
+     * Get the list of subscribed events.
+     *
+     * Returns an array of event names this plugin subscribes to,
+     * along with the method names to be called when those events are fired.
+     *
+     * @return array<string, string> Array of event names and their handler methods
+     */
     public static function getSubscribedEvents(): array
     {
         return [
-            ScriptEvents::PRE_AUTOLOAD_DUMP => 'onPreAutoloadDump'
+            ScriptEvents::PRE_AUTOLOAD_DUMP => 'onPreAutoloadDump',
         ];
     }
 
     /**
-     * Before autoload dump - inject test namespaces into root package
+     * Handle the pre-autoload-dump event.
+     *
+     * Discovers packages with test namespaces and injects them into
+     * the root package's autoload-dev configuration before the autoload
+     * files are generated.
+     *
+     * @param Event $event The Composer script event
+     *
+     * @return void
      */
     public function onPreAutoloadDump(Event $event): void
     {
@@ -52,15 +140,16 @@ class Plugin implements PluginInterface, EventSubscriberInterface
 
         $this->io->write('<info>Package Tester:</info> Discovering and registering test namespaces...');
 
-        // Discover packages
+        // Discover packages with test configurations
         $packages = $this->discoverer->discover();
 
         if (empty($packages)) {
             $this->io->write('<comment>Package Tester:</comment> No packages with tests found.');
+
             return;
         }
 
-        // Keep discovered packages available for runtime command usage.
+        // Persist discovered packages for runtime command usage
         $this->configExtra->save($packages);
 
         // Inject namespaces into root package's autoload-dev
@@ -71,7 +160,14 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
-     * Inject discovered autoload-dev namespaces into root package
+     * Inject discovered autoload-dev namespaces into root package.
+     *
+     * Iterates through discovered packages and adds their test namespace
+     * mappings to the root package's PSR-4 autoload-dev configuration.
+     *
+     * @param array<string, array{path: string, autoload_dev: array<string, string|array>}> $packages Array of discovered packages
+     *
+     * @return void
      */
     protected function injectAutoloadDev(array $packages): void
     {
@@ -104,13 +200,13 @@ class Plugin implements PluginInterface, EventSubscriberInterface
                         continue;
                     }
 
-                    // Normalize namespace (ensure trailing backslash)
+                    // Normalize namespace with trailing backslash
                     $ns = rtrim($namespace, '\\') . '\\';
 
                     // Get relative path from project root
                     $relativePath = $this->getRelativePath($fullPath);
 
-                    // Add to autoload-dev psr-4
+                    // Add to autoload-dev psr-4 if not already exists
                     if (!isset($autoloadDev['psr-4'][$ns])) {
                         $autoloadDev['psr-4'][$ns] = $relativePath;
                         $injectedCount++;
@@ -118,14 +214,14 @@ class Plugin implements PluginInterface, EventSubscriberInterface
                         if ($this->io->isVerbose()) {
                             $this->io->write("  + {$ns} => {$relativePath}");
                         }
-                    } else if ($this->io->isVeryVerbose()) {
+                    } elseif ($this->io->isVeryVerbose()) {
                         $this->io->write("  <comment>Skip (already exists): {$ns}</comment>");
                     }
                 }
             }
         }
 
-        // Update root package's autoload-dev
+        // Update root package's autoload-dev configuration
         $rootPackage->setDevAutoload($autoloadDev);
 
         if ($this->io->isVerbose()) {
@@ -134,7 +230,14 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
-     * Get relative path from project base
+     * Get relative path from project base directory.
+     *
+     * Converts an absolute path to a path relative to the project's base directory.
+     * If the path cannot be made relative, returns the original absolute path.
+     *
+     * @param string $absolutePath The absolute path to convert
+     *
+     * @return string The relative path or original absolute path if conversion fails
      */
     protected function getRelativePath(string $absolutePath): string
     {
@@ -149,6 +252,15 @@ class Plugin implements PluginInterface, EventSubscriberInterface
         return $absolutePath;
     }
 
+    /**
+     * Get the base path of the project.
+     *
+     * Returns the directory containing the vendor folder, which is typically
+     * the project root directory. Falls back to current working directory
+     * if Composer is not initialized.
+     *
+     * @return string The project base path
+     */
     protected function getBasePath(): string
     {
         if ($this->composer === null) {
@@ -158,6 +270,17 @@ class Plugin implements PluginInterface, EventSubscriberInterface
         return dirname($this->composer->getConfig()->get('vendor-dir'));
     }
 
+    /**
+     * Ensure the plugin is properly initialized.
+     *
+     * Initializes or updates the internal state with provided Composer and IO instances.
+     * Creates the discoverer and config extra instances if they don't exist.
+     *
+     * @param Composer|null    $composer The Composer instance to use
+     * @param IOInterface|null $io       The IO interface to use
+     *
+     * @return bool True if initialization successful, false otherwise
+     */
     protected function ensureInitialized(?Composer $composer = null, ?IOInterface $io = null): bool
     {
         if ($this->composer === null && $composer !== null) {
