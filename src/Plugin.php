@@ -54,6 +54,13 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     protected ?ConfigExtra $configExtra = null;
 
     /**
+     * The project base path.
+     *
+     * @var string
+     */
+    protected string $basePath = '';
+
+    /**
      * Activate the plugin.
      *
      * Called when the plugin is activated. Initializes the composer instance,
@@ -68,16 +75,15 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     {
         $this->composer = $composer;
         $this->io = $io;
+        $this->basePath = dirname($composer->getConfig()->get('vendor-dir'));
         $this->discoverer = new Discoverer($composer);
-        $this->configExtra = new ConfigExtra($this->getBasePath());
-
-        $this->io->write("PackageTester Plugin activated");
+        $this->configExtra = new ConfigExtra($this->basePath);
     }
 
     /**
      * Deactivate the plugin.
      *
-     * Called when the plugin is deactivated. Currently performs no cleanup actions.
+     * Called when the plugin is deactivated. Currently, performs no cleanup actions.
      *
      * @param Composer    $composer The Composer instance
      * @param IOInterface $io       The IO interface for console output
@@ -102,7 +108,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      */
     public function uninstall(Composer $composer, IOInterface $io): void
     {
-        $basePath = $this->getBasePath();
+        $basePath = dirname($composer->getConfig()->get('vendor-dir'));
         (new ConfigExtra($basePath))->clear();
     }
 
@@ -241,8 +247,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
      */
     protected function getRelativePath(string $absolutePath): string
     {
-        $basePath = $this->getBasePath();
-        $realBase = realpath($basePath);
+        $realBase = realpath($this->basePath);
         $realPath = realpath($absolutePath);
 
         if ($realBase && $realPath && str_starts_with($realPath, $realBase)) {
@@ -250,24 +255,6 @@ class Plugin implements PluginInterface, EventSubscriberInterface
         }
 
         return $absolutePath;
-    }
-
-    /**
-     * Get the base path of the project.
-     *
-     * Returns the directory containing the vendor folder, which is typically
-     * the project root directory. Falls back to current working directory
-     * if Composer is not initialized.
-     *
-     * @return string The project base path
-     */
-    protected function getBasePath(): string
-    {
-        if ($this->composer === null) {
-            return getcwd() ?: '';
-        }
-
-        return dirname($this->composer->getConfig()->get('vendor-dir'));
     }
 
     /**
@@ -295,12 +282,16 @@ class Plugin implements PluginInterface, EventSubscriberInterface
             return false;
         }
 
+        if (empty($this->basePath)) {
+            $this->basePath = dirname($this->composer->getConfig()->get('vendor-dir'));
+        }
+
         if ($this->discoverer === null) {
             $this->discoverer = new Discoverer($this->composer);
         }
 
         if ($this->configExtra === null) {
-            $this->configExtra = new ConfigExtra($this->getBasePath());
+            $this->configExtra = new ConfigExtra($this->basePath);
         }
 
         return true;
