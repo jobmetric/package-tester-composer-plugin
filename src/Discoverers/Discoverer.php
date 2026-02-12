@@ -4,43 +4,53 @@ namespace JobMetric\PackageTesterComposerPlugin\Discoverers;
 
 use Composer\Composer;
 
+/**
+ * Class Discoverer
+ *
+ * Entry point for package discovery operations.
+ * Acts as a facade for the PackageDiscoverer to simplify usage within the plugin.
+ *
+ * @package JobMetric\PackageTesterComposerPlugin\Discoverers
+ */
 class Discoverer
 {
     /**
-     * Composer instance
-     *
-     * @var Composer
-     */
-    protected Composer $composer;
-
-    /**
-     * Base path
+     * The project base path.
      *
      * @var string
      */
     protected string $basePath;
-
+    
     /**
-     * Create a new discoverer instance
+     * Create a new discoverer instance.
      *
-     * @param Composer $composer
+     * @param Composer $composer The Composer instance to extract base path from
      */
     public function __construct(Composer $composer)
     {
-        $this->composer = $composer;
         $this->basePath = dirname($composer->getConfig()->get('vendor-dir'));
     }
-
+    
     /**
-     * Discover packages with tests
+     * Discover all packages with test configurations.
      *
-     * @return array
+     * Scans the vendor directory and returns an array of packages
+     * that have package-tester.json configuration files.
+     *
+     * @return array<string, array{
+     *     name: string,
+     *     version: string,
+     *     description: string,
+     *     path: string,
+     *     tests: array,
+     *     options: array,
+     *     dependencies: array,
+     *     autoload_dev: array<string, string|array>,
+     *     package_tester_config: string
+     * }> Array of discovered packages indexed by package name
      */
     public function discover(): array
     {
-        $discoverer = new PackageDiscoverer($this->basePath);
-        $discoverer->discover();
-
-        return $discoverer->getPackages();
+        return (new PackageDiscoverer($this->basePath))->discover()->getPackages();
     }
 }
